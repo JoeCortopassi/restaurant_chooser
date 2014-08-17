@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script>
+        function getQueryParams(qs)
+        {
+            qs = qs.split("+").join(" ");
+
+            var params = {}, tokens,
+                re = /[?&]?([^=]+)=([^&]*)/g;
+
+            while (tokens = re.exec(qs))
+            {
+                params[decodeURIComponent(tokens[1])]
+                    = decodeURIComponent(tokens[2]);
+            }
+
+            return params;
+        }
+
+
+    </script>
+    <script>
+        var yelp_list;
+        var query = getQueryParams(document.location.search);
+        var url = "http://api.yelp.com/business_review_search?/*api key OAuth1*/=" + query.zipcode + "&category=restaurants";
+
+        $.ajax({
+            dataType: "jsonp",
+            url: url,
+            success: function(data){
+                yelp_list = data['businesses'];
+                setup();
+            }
+        });
+    </script>
+    <style>
+        .container
+        {
+            float: left;
+            margin:50px;
+            width: 200px;
+        }
+
+        #choice1, #choice2
+        {
+            background-color: #eee;
+            height: 50px;
+            width: 200px;
+        }
+    </style>
+    <script>
+        var ratings = {};
+        var iterations = 0;
+
+
+
+
+        function selectChoice(winner, competitor)
+        {
+            console.log("Winner: " + winner + ", Looser: " + competitor);
+            elo(winner, competitor);
+            presentChoices();
+
+            if (iterations > 10)
+            {
+                $("#winner").html(highestRated());
+            }
+            else
+            {
+                iterations++;
+            }
+        }
+
+
+        function elo(winner, loser)
+        {
+            var winner_rating = ratings[winner];
+            var loser_rating = ratings[loser];
+            var e = score() - Math.round(1 / (1 + Math.pow(10, ((loser_rating - winner_rating) / 400))) * score());
+            console.log("ELO: " + e);
+            ratings[winner] = winner_rating + e;
+            ratings[loser] = loser_rating - e;
+        }
+
+
+        function score()
+        {
+            return 1400;
+        }
+
+
+        function highestRated()
+        {
+            var highest_name = '';
+            var highest_rating = 0;
+            for (var key in ratings)
+            {
+                if (ratings[key] > highest_rating)
+                {
+                    highest_name = key;
+                    highest_rating = ratings[key];
+                }
+            }
+
+            return "The highest rated restaurant is \"" + highest_name + "\" with a rating of " + highest_rating;
+        }
+
+
+        function presentChoices()
+        {
+            console.dir(yelp_list)
+            var choice1 = yelp_list[rand(0, yelp_list.length)]['name'];
+            var choice2 = yelp_list[rand(0, yelp_list.length)]['name'];
+
+            // Set Labels
+            $("#choice1").val(choice1);
+            $("#choice2").val(choice2);
+
+            // Set winners
+            $("#choice1").attr('data-winner', choice1);
+            $("#choice2").attr('data-winner', choice2);
+
+            // Set loosers
+            $("#choice1").attr('data-looser', choice2);
+            $("#choice2").attr('data-looser', choice1);
+        }
+
+
+        function rand(start, end)
+        {
+            return Math.floor(Math.random() * end) + start;
+        }
+
+
+        function setup()
+        {
+            for (var i=0; i<yelp_list.length; i++)
+            {
+                var name = yelp_list[i]['name'];
+                var rating = 1400;
+                ratings[name] = rating;
+            }
+
+            presentChoices();
+
+            $("#choice1, #choice2").on('click', function(){
+                var winner = $(this).attr('data-winner');
+                var looser = $(this).attr('data-looser');
+                selectChoice(winner, looser);
+            });
+        }
+    </script>
+
+</head>
+<body>
+    <div>
+        <div class="container">
+            <input type="button" id="choice1" value="choose" data-winner="" data-looser=""/>
+        </div>
+        <div class="container">
+            <input type="button" id="choice2" value="choose" data-winner="" data-looser=""/>
+        </div>
+    </div>
+    <div>
+        <h2 id="winner"></h2>
+    </div>
+</body>
+</html>
